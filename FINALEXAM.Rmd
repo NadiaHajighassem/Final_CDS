@@ -1,0 +1,117 @@
+---
+title: "Portfolio Assignment 3 - Chi square test"
+author: "Nadia Hajighassem"
+date: "2024-01-12"
+output:
+  pdf_document:
+---
+
+
+```{r}
+#install packages
+pacman::p_load('car',
+               'ggplot2',
+               'tidyverse',
+               'dplyr',
+               'rcompanion',
+               'hrbrthemes')
+```
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+
+
+```{r}
+# load in data
+df <- read.csv("combined_df.csv")
+```
+
+Make Contingency table
+```{r}
+# prepare data for chi-square test
+sentiment_table <- table(df$Subreddit, df$Sentiment)
+
+# View the table
+print(sentiment_table)
+```
+
+
+```{r}
+color <- c("red", "blue", "green")
+
+
+ggplot(df, aes(x = Subreddit, fill = Sentiment)) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(values = color) +
+  labs(title = "Sentiment Distribution by Subreddit",
+       x = "Subreddit",
+       y = "Count") + 
+    theme_minimal()
+
+```
+```{r}
+# Calculate the proportion of each sentiment within each Subreddit
+df_prop <- df %>%
+  group_by(Subreddit, Sentiment) %>%
+  summarise(Count = n()) %>%
+  mutate(Proportion = Count / sum(Count))
+
+# Plot the data as proportions
+ggplot(df_prop, aes(x = Subreddit, y = Proportion, fill = Sentiment)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = color) +
+  labs(
+    title = "Sentiment Proportion by Subreddit",
+    x = "Subreddit",
+    y = "Proportion",
+    fill = "Sentiment"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent)  
+
+# lets check the numbers
+df_prop
+```
+
+
+```{r}
+# chi-square test of independence
+chi_sq_test <- chisq.test(sentiment_table)
+print(chi_sq_test)
+```
+
+```{r}
+# lets check the residuals
+residuals <- chi_sq_test$residuals
+residuals
+```
+
+```{r}
+library(ggplot2)
+
+# convert to df
+residuals_df <- as.data.frame(as.table(residuals))
+colnames(residuals_df) <- c("Row", "Column", "Residual")
+
+# heatmap
+ggplot(residuals_df, aes(x = Column, y = Row, fill = Residual)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "red", mid = "white", high = "green") + # green is positive, red is negative
+  labs(title = "Residuals Heatmap from Chi-Square Test",
+       x = "Column Variable",
+       y = "Row Variable",
+       fill = "Residual") +
+  theme_minimal()
+
+
+```
+
+```{r}
+# Calculate Cramer's V
+cramers_v <- cramerV(sentiment_table)
+
+# Print the result
+print(cramers_v)
+```
+
